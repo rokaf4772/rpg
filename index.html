@@ -3770,7 +3770,7 @@ const BOMB_T=MON.length;MON.push({n:'해골 폭탄병',hp:20,e:8,g:5,sk:'mon_bom
 const GR_T=MON.length;MON.push({n:'망자의 손아귀',hp:1,e:0,g:0,sk:'mon_bomber',dummy:1,D:{id:'grasp',n:'망자의 손아귀',rh:1.6,hw:.4,sp:0,hp:1,at:0,df:0,ev:0,ex:0}});
 const ARC_MAP='12-3';
 /* 수치 */
-const AT={msl:{cd:9,n:3,life:5,sp:58,turn:2.2,r:.45},sil:5,slow:5,slowK:.3,mstun:5,
+const AT={msl:{cd:9,n:3,gap:1,life:5,sp:58,turn:2.2,r:.45},sil:2,slow:5,slowK:.3,mstun:5,
  gr:{cd:12,tele:.6,r:1.0,hits:5,stunAt:5,drainAt:6,drain:.03,max:12},
  sum:{cd:15,n:5},bomb:{cd:20,n:2,r:1.7},curse:{cd:35,dur:30,slow:.7,dmg:.7,take:1.3},
  rage:{at:.1,dur:25,max:30,every:7},tp:.1,gap:[2.2,3.6]};
@@ -3795,13 +3795,13 @@ function arcAsk(){ARC.asked=1;const n={name:'망자의 제단',qid:'_arcanus'},l
  const ch=Object.entries(BOSS_DIFF).map(([k,d])=>({l:`${d.n} (Lv.${d.need}+)`,cls:lv<d.need?'n':'',f:()=>{if(lv<d.need)return[{t:`<b>${d.n}</b> 난이도는 <b>Lv.${d.need}</b> 이상만 도전할 수 있습니다.`,ch:[{l:'다시 고르기',f:()=>{setTimeout(arcAsk,0)}}]}];arcStart(k)}}));
  ch.push({l:'돌아가기',cls:'n',f:()=>{setTimeout(()=>travel(HKEY('12-2')),0)}});
  dlgOpen(n,[{t:'검게 그을린 제단 위에 왕관을 쓴 해골의 그림자가 일렁인다.<br><b>망령왕 아르카누스</b> — 죽은 자들을 부리는 데드하임의 왕.<br>제단에 손을 대면 그가 깨어난다.',ch}])}
-function arcStart(k){const d=BOSS_DIFF[k];ARC.diff=k;ARC.t0=T;ARC.adds=[];ARC.msl=[];ARC.fx=[];ARC.grasp=null;ARC.curse=0;ARC.sil=0;ARC.slowT=0;
+function arcStart(k){const d=BOSS_DIFF[k];ARC.diff=k;ARC.t0=T;ARC.adds=[];ARC.msl=[];ARC.mq=[];ARC.fx=[];ARC.grasp=null;ARC.curse=0;ARC.sil=0;ARC.slowT=0;
  const [x,y]=openSpot(P.x,P.y,6,9);
  const hp=Math.round(mobHP(d.lv)*d.hp);
  const m={t:ARC_T,x,y,hp,mhp:hp,d:P.x>x?1:-1,dir:'d',tx:x,ty:y,wt:0,mv:0,step:0,hit:0,show:3,ag:9,cd:3,flee:0,dead:0,arc:1,lv:d.lv,df:d.df,ev:AD.ev,at:AD.at*d.at,ex:d.ex,bs:'wake',bT:T,
   nM:T+4,nG:T+9,nS:T+6,nB:T+14,nC:T+11,nTp:.9,raged:0};
  MS.push(m);ARC.m=m;SHAKE=.3;chat(`[보스] 망령왕 아르카누스(${d.n} · Lv.${d.lv})가 깨어났습니다!`,'#d8b0ff')}
-{const _em=enterMap;enterMap=function(k,pos){_em(k,pos);ARC.m=null;ARC.asked=0;ARC.adds=[];ARC.msl=[];ARC.fx=[];ARC.grasp=null;ARC.curse=0;ARC.sil=0;ARC.slowT=0;P.trap=null;
+{const _em=enterMap;enterMap=function(k,pos){_em(k,pos);ARC.m=null;ARC.asked=0;ARC.adds=[];ARC.msl=[];ARC.mq=[];ARC.fx=[];ARC.grasp=null;ARC.curse=0;ARC.sil=0;ARC.slowT=0;P.trap=null;
  if(onArcMap()&&typeof lzNeed=='function')for(const k of['mon_arcanus','mon_bomber','mon_skeleton','mon_mummy','mon_jiangshi','mon_reaper'])lzNeed(k)}}
 {const _mk=mk;mk=function(t,far){if(onArcMap())return;return _mk(t,far)}}
 setInterval(()=>{if(SCR=='game'&&onArcMap()&&!ARC.asked&&!trans&&!modal&&!ARC.m&&P.dead<=0&&(HFR['m:mon_arcanus']||T-(ARC.waitT||(ARC.waitT=T))>8))arcAsk()},400);
@@ -3828,13 +3828,15 @@ for(const fn of['cast','castSk','castSk0','dash','castUlt']){try{const o=eval(fn
 {const _h=hurt;hurt=function(d){if(curseOn())d=Math.round(d*AT.curse.take);return _h(d)}}
 
 /* ---------- 미사일 ---------- */
-function castMissile(){const m=ARC.m,id=T;ARC.cnt=ARC.cnt||{};ARC.cnt[id]=0;
- for(let i=0;i<AT.msl.n;i++){const a=Math.atan2(P.y-m.y,P.x-m.x)+(i-1)*.7;ARC.msl.push({x:m.x+Math.cos(a)*CH*.8,y:m.y-CH*.2+Math.sin(a)*CH*.5,h:CH*1.1,vx:Math.cos(a),vy:Math.sin(a),t:0,id,dead:0})}}
-function mslHit(s){const c=++ARC.cnt[s.id];const m=ARC.m||{at:AD.at,lv:150};bHurt(m,.8);
- if(c==1){silence();for(const f of[-1,1])arcAdd('reaper',P.x+f*CH*1.4,P.y)}
- else if(c==2){ARC.slowT=T+AT.slow;fl(P.x,P.y-CH-14,'둔화 70%','#a8b8ff')}
- else if(c>=3){P.stun=Math.max(P.stun||0,AT.mstun);P.act=0;fl(P.x,P.y-CH-14,'기절!','#ffe080')}}
-function updMissiles(dt){const q=UQ();for(const s of ARC.msl){if(s.dead)continue;s.t+=dt;if(s.t>AT.msl.life){s.dead=1;ARC.fx.push({k:'mpop',x:s.x,y:s.y,t:T});continue}
+/* 해골은 1초 간격으로 한 발씩 날아온다 */
+function castMissile(){ARC.mq=ARC.mq||[];for(let i=0;i<AT.msl.n;i++)ARC.mq.push(T+i*AT.msl.gap)}
+function spawnSkull(){const m=ARC.m;if(!m)return;const a=Math.atan2(P.y-m.y,P.x-m.x);ARC.msl.push({x:m.x+Math.cos(a)*CH*.8,y:m.y-CH*.2+Math.sin(a)*CH*.5,h:CH*1.1,vx:Math.cos(a),vy:Math.sin(a),t:0,dead:0})}
+/* 맞을 때의 상태로 효과가 정해진다: 둔화 중 → 기절, 침묵 중 → 둔화, 그 외 → 침묵(+사신) */
+function mslHit(s){const m=ARC.m||{at:AD.at,lv:150};bHurt(m,.8);
+ if(ARC.slowT>T){ARC.slowT=0;P.stun=Math.max(P.stun||0,AT.mstun);P.act=0;fl(P.x,P.y-CH-14,'기절!','#ffe080')}
+ else if(silOn()){ARC.slowT=T+AT.slow;fl(P.x,P.y-CH-14,'둔화 70%','#a8b8ff')}
+ else{silence();const rp=ARC.adds.filter(a=>!a.dead&&a.t===MON_T.reaper).length;if(rp<4)for(const f of[-1,1])arcAdd('reaper',P.x+f*CH*1.4,P.y)}}
+function updMissiles(dt){const q=UQ();if(ARC.mq&&ARC.mq.length){ARC.mq=ARC.mq.filter(t=>{if(T>=t){spawnSkull();return false}return true})}for(const s of ARC.msl){if(s.dead)continue;s.t+=dt;if(s.t>AT.msl.life){s.dead=1;ARC.fx.push({k:'mpop',x:s.x,y:s.y,t:T});continue}
   const dx=P.x-s.x,dy=(P.y-s.y)*1.4,L=Math.hypot(dx,dy)||1,ta=Math.atan2(dy,dx),ca=Math.atan2(s.vy,s.vx);let da=ta-ca;while(da>Math.PI)da-=6.283;while(da<-Math.PI)da+=6.283;
   const na=ca+Math.max(-AT.msl.turn*dt,Math.min(AT.msl.turn*dt,da)),sp=AT.msl.sp*q*(s.t<.4?.5:1);s.vx=Math.cos(na);s.vy=Math.sin(na);s.x+=s.vx*sp*dt;s.y+=s.vy*sp*dt/1.4;
   if(P.dead<=0&&!(P.dash>0)&&Math.hypot(P.x-s.x,(P.y-s.y)*1.4)<CH*AT.msl.r){s.dead=1;ARC.fx.push({k:'mpop',x:s.x,y:s.y,t:T});mslHit(s)}}
@@ -3872,6 +3874,8 @@ function arcAI(m,dt){const q=UQ(),alive=P.dead<=0;m.hit=Math.max(0,m.hit-dt);m.s
  if(m.bs=='wake'){if(T-m.bT>.8)m.bs='chase';return}
  if(m.bs=='tp'){const t=T-m.bT;if(t>=.45&&!m.tpd){m.tpd=1;const[x,y]=openSpot(P.x,P.y,5,8);m.x=x;m.y=y;ARC.fx.push({k:'tpi',x:m.x,y:m.y,t:T})}
   if(t>=.9){m.bs='chase';m.tpd=0;m.cd=Math.min(m.cd,1.2)}return}
+ if(m.bs=='rtp'){const t=T-m.bT;if(t>=.45&&!m.tpd){m.tpd=1;const c=clearAt(map.w/2,map.h/2,CH*1.2)?[map.w/2,map.h/2]:openSpot(map.w/2,map.h/2,0,3);m.x=c[0];m.y=c[1];ARC.fx.push({k:'tpi',x:m.x,y:m.y,t:T})}
+  if(t>=.9){m.tpd=0;m.bs='rage';m.bT=T;m.nRf=T+.6;m.nRc=T+1.5}return}
  if(m.bs=='rage'){const t=T-m.bT,R=AT.rage;m.lift=Math.min(1,t/1)*CH*1.2;m.hp=Math.max(Math.round(m.mhp*.01),Math.round(m.mhp*(R.at-(R.at-.01)*Math.min(1,t/R.dur))));
   if(T>=m.nRf){m.nRf=T+.8;let n=aliveAdds();const ids=['skeleton','mummy','jiangshi','bomber'];while(n<R.max){const id=ids[Math.random()*4|0],a=Math.random()*6.283,r=CH*rnd(2,5);arcAdd(id,m.x+Math.cos(a)*r,m.y+Math.sin(a)*r*.6,id=='bomber'?{bomb:1,hpm:.8}:null);n++;if(n%6==0)break}}
   if(T>=m.nRc){m.nRc=T+R.every;castMissile();castGrasp();castCurse()}
@@ -3893,8 +3897,8 @@ function arcAI(m,dt){const q=UQ(),alive=P.dead<=0;m.hit=Math.max(0,m.hit-dt);m.s
 {const _dm=dmgMon;dmgMon=function(m,d,c){
  if(m.grasp){if(m.dead)return;m.hp-=1;m.hit=.12;fl(m.x,m.y-CH*1.3,'균열','#e0c0ff');if(m.hp<=0){m.hp=0;m.dead=1}return}
  if(curseOn()&&!isArc(m)&&!m.grasp)d=Math.max(1,Math.round(d*AT.curse.dmg));
- if(isArc(m)){if(curseOn())d=Math.max(1,Math.round(d*AT.curse.dmg));if(m.immune||m.bs=='rage'||m.bs=='tp'){if(T-(m.imT||-9)>.25){m.imT=T;fl(m.x,m.y-CH*AD.rh*.6,'무적','#d0b0ff')}return}
-  const r0=m.hp/m.mhp;if(aHard()&&!m.raged&&(m.hp-d)/m.mhp<=AT.rage.at){d=Math.max(0,m.hp-Math.round(m.mhp*AT.rage.at));m.raged=1;m.bs='rage';m.bT=T;m.nRf=T+1;m.nRc=T+1.2;m.immune=1;m.tpq=0;SHAKE=.5;chat(`[보스] 아르카누스가 광폭합니다! ${AT.rage.dur}초 동안 망자들이 끝없이 몰려옵니다.`,'#ff90c0')}
+ if(isArc(m)){if(curseOn())d=Math.max(1,Math.round(d*AT.curse.dmg));if(m.immune||m.bs=='rage'||m.bs=='rtp'||m.bs=='tp'){if(T-(m.imT||-9)>.25){m.imT=T;fl(m.x,m.y-CH*AD.rh*.6,'무적','#d0b0ff')}return}
+  const r0=m.hp/m.mhp;if(aHard()&&!m.raged&&(m.hp-d)/m.mhp<=AT.rage.at){d=Math.max(0,m.hp-Math.round(m.mhp*AT.rage.at));m.raged=1;m.bs='rtp';m.bT=T;ARC.fx.push({k:'tpo',x:m.x,y:m.y,t:T});m.nRf=T+1;m.nRc=T+1.2;m.immune=1;m.tpq=0;SHAKE=.5;chat(`[보스] 아르카누스가 광폭합니다! ${AT.rage.dur}초 동안 망자들이 끝없이 몰려옵니다.`,'#ff90c0')}
   else{const r1=(m.hp-d)/m.mhp;if(r1>AT.rage.at&&r1>0&&Math.floor(r0*10+1e-6)>Math.floor(r1*10+1e-6))m.tpq=1}}
  _dm(m,d,c);
  if(m.bomb&&m.dead&&!m.boomed){m.boomed=0;bombBoom(m)}
@@ -3906,8 +3910,8 @@ function arcAI(m,dt){const q=UQ(),alive=P.dead<=0;m.hit=Math.max(0,m.hit-dt);m.s
 function drawArc(m,alpha){const sk='m:mon_arcanus';if(!HFR[sk])return;let an='idle',t=T,len=0,dir=m.dir||'d';
  if(m.dieT){an='death';len=aLen('death');t=Math.min(T-m.dieT,len*.999);dir='d'}
  else if(m.bs=='wake')alpha*=Math.min(1,(T-m.bT)/.8);
- else if(m.bs=='tp'){const u=T-m.bT;alpha*=u<.45?1-u/.45:(u-.45)/.45}
- else if(m.bs=='rage'){an='rage';dir='d'}
+ else if(m.bs=='tp'||m.bs=='rtp'){const u=T-m.bT;alpha*=u<.45?1-u/.45:(u-.45)/.45}
+ else if(m.bs=='rage'){an='rage';dir='d';let f=(T-m.bT)*ARC_AN.rage.fps;if(f>=18){const u=(f-18)%16;f=u<8?17-u:9+(u-8)}t=(Math.floor(f)+.5)/ARC_AN.rage.fps}
  else if(m.bs=='cast'){an=m.cast.an;len=m.cast.L;t=T-m.cast.t0}
  else if(T-(m.mvT||-9)<.15){an='walk';t=m.wa||0}
  if(!HFR[sk][dir==='u'?'u':dir==='s'?'s':'d'][an])dir='d';
