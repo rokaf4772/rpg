@@ -4006,7 +4006,11 @@ function krStart(k){const d=BOSS_DIFF[k];KR.diff=k;KR.t0=T;KR.adds=[];KR.tents=[
  krProxy(m);MS.push(m);KR.m=m;SHAKE=.6;KR.fx.push({k:'splash',x:KPIT.cx,y:KBD.base,t:T,big:1});
  chat(`[보스] 봉인이 끊어졌습니다! 크라켄(${d.n} · Lv.${d.lv})이 깨어났습니다!`,'#8fd8ff')}
 {const _em=enterMap;enterMap=function(k,pos){_em(k,pos);KR.m=null;KR.asked=0;KR.adds=[];KR.tents=[];KR.chains=[];KR.fx=[];KR.root=null;KR.sil=0;KR.dead=null;if(onKrMap())kLoad()}}
-setInterval(()=>{if(SCR=='game'&&onKrMap()&&!KR.asked&&!trans&&!modal&&!KR.m&&P.dead<=0)krAsk()},400);
+setInterval(()=>{if(SCR!='game'||!onKrMap()||trans||KR.m||KR.dead&&T-KR.dead.t<5||P.dead>0)return;if(modal){KR.cT=0;return}
+ if(!KR.asked){krAsk();return}
+ /* 대화창을 닫았으면: 구덩이(봉인) 가장자리로 다가가면 다시 묻는다 */
+ if(!KR.cT){KR.cT=T;if(!KR.told){KR.told=1;chat('[안내] 가운데 봉인(구덩이 가장자리)에 다가가면 크라켄에게 다시 도전할 수 있습니다.','#9fe0ff')}return}
+ const q=pitNear(P.x,P.y);if(T-KR.cT>1.5&&Math.hypot(P.x-q[0],(P.y-q[1])*1.4)<CH*1.3){KR.cT=0;krAsk()}},400);
 /* 봉인이 풀린 캐릭터도 13-3(보스방)으로 들어올 수 있게: 봉인이 풀린 신전(13-4)은 대화창에서 고른다 */
 {const _tr=travel;travel=function(k,pos){if(k==HKEY(KR_MAP)&&cur&&cur.kraken){const s=cur.kraken;cur.kraken=0;try{kLoad();return _tr(k,pos)}finally{cur.kraken=s}}if(k==HKEY(KR_MAP))kLoad();return _tr(k,pos)}}
 {const _mk=mk;mk=function(t,far){if(onKrMap())return;return _mk(t,far)}}
