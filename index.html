@@ -1245,7 +1245,8 @@ function travel(k,pos){if(trans)return;trans=true;const e=$('fd'),need=MAPS[k]&&
  setTimeout(()=>{Promise.resolve(need?huntPrep(k):0).then(go,go)},300)}
 $('mChar').onclick=()=>{saveCur();fade(()=>{selId=cur.id;page=Math.floor(idxOf(cur.id)/PER);selT=0;cur=null;setScr('select')})};
 $('mHome').onclick=()=>{if(map&&!map.safe&&P.dead<=0)travel('town')};
-function renderQ(){const q=QS[cur.qi];$('qs').innerHTML=`<b>${q.l}</b><div class="qrow"><span>${q.n}</span><span>${cur.qn}/${q.k}</span></div><small>${map&&map.hint?map.hint:'사냥터에서 사냥하세요. 떨어진 아이템은 '+(touch?'지나가면':kn(KB.pick)+' 키로')+' 줍습니다.'}</small>`}
+/* 반복 퀘스트(사냥터의 위협)는 Lv.10까지만: 보상이 '필요 EXP의 %'라 고레벨이 하면 경험치를 날로 먹는다 */
+const QMAXLV=10;function renderQ(){const hint=map&&map.hint?map.hint:'사냥터에서 사냥하세요.';if(cur.lv>QMAXLV){$('qs').innerHTML=`<b>사냥터 안내</b><small>${hint}</small>`;return}const q=QS[cur.qi];$('qs').innerHTML=`<b>${q.l}</b><div class="qrow"><span>${q.n}</span><span>${cur.qn}/${q.k}</span></div><small>${map&&map.hint?map.hint:'사냥터에서 사냥하세요. 떨어진 아이템은 '+(touch?'지나가면':kn(KB.pick)+' 키로')+' 줍습니다.'}</small>`}
 function toggleAuto(){if(SCR!='game')return;auto=!auto;$('au').classList.toggle('on',auto);chat('[시스템] 자동 사냥 '+(auto?'ON':'OFF'))}
 /* ================= 충돌 ================= */
 function blocked(x,y){if(map.walk){const W=map.w,q=map.ch/22;for(const[dx0,dy0]of[[-3,-1],[3,-1],[-3,1],[3,1],[0,0]]){const dx=dx0*q,dy=dy0*q;const px=Math.round(x+dx),py=Math.round(y+dy);if(px<0||py<0||px>=W||py>=map.h||!map.walk[py*W+px])return true}return false}
@@ -1273,7 +1274,7 @@ for(const m of MS){m.hit=Math.max(0,m.hit-dt);m.show=Math.max(0,m.show-dt);const
  else{m.wt-=dt;if(m.wt<=0){m.tx=cl(m.x+rnd(-80,80)*q,20,map.w-20);m.ty=cl(m.y+rnd(-60,60)*q,40,map.h-20);m.wt=rnd(2,5);m.mv=Math.random()<.7}if(m.mv){tx=m.tx;ty=m.ty;sp=18*q}}
  const ex=tx-m.x,ey=ty-m.y,ed=Math.hypot(ex,ey);if(sp&&ed>2){tryMove(m,m.x+ex/ed*sp*dt,m.y+ey/ed*sp*dt);m.step+=sp*dt/q;if(Math.abs(ex)>1)m.d=ex>0?1:-1}else m.mv=0}}
 function gain(e,g){cur.gold+=g;cur.exp+=e;while(cur.exp>=need()){cur.exp-=need();cur.lv++;cur.ap+=5;cur.sp+=1;stats();P.hp=P.mhp;P.mp=P.mmp;chat('[시스템] 레벨 업! Lv.'+cur.lv+' 달성 · AP +5, SP +1 (능력치·스킬 창에서 올리세요)','#ffe070');fl(P.x,P.y-CH-12,'LEVEL UP!','#ffe070')}}
-function quest(t){const q=QS[cur.qi];if(q.t<0||q.t==t){cur.qn++;if(cur.qn>=q.k){{const qe=Math.round(need()*.06*(cur.qi+1)),qg=Math.round((40+cur.lv*12)*(cur.qi+1));gain(qe,qg);chat('[퀘스트] '+q.n+' 완료! EXP +'+qe+' · 골드 +'+qg,'#9fe070')};cur.qi=(cur.qi+1)%QS.length;cur.qn=0}renderQ()}}
+function quest(t){if(cur.lv>QMAXLV){renderQ();return}const q=QS[cur.qi];if(q.t<0||q.t==t){cur.qn++;if(cur.qn>=q.k){{const qe=Math.round(need()*.06*(cur.qi+1)),qg=Math.round((40+cur.lv*12)*(cur.qi+1));gain(qe,qg);chat('[퀘스트] '+q.n+' 완료! EXP +'+qe+' · 골드 +'+qg,'#9fe070')};cur.qi=(cur.qi+1)%QS.length;cur.qn=0}renderQ()}}
 function dmgMon(m,d,c){if(m.dead)return;d=Math.round(d);m.hp-=d;m.hit=.12;m.show=3;fl(m.x,m.y-26*UQ(),d,c||'#fff');if(m.t==1)m.flee=2.5;else m.ag=3;
 if(m.hp<=0){m.dead=1;FX.push({k:'poof',x:m.x,y:m.y-8*UQ(),t:.4});const M=MON[m.t],ex=mobExp(m);gain(ex,0);spawnDrops(m);quest(m.t);chat(`[전투] ${M.n} 처치  EXP +${ex}`)}}
 function hurt(d){if(P.dead>0||SCR!='game'||P.dash>0)return;d=Math.max(1,Math.round(d));P.hp-=d;if(P.act<=0){P.hurt=animLen(skin(cur),'hurt');P.at=0}fl(P.x,P.y-CH-4,d,'#ff6060');
