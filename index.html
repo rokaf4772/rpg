@@ -4227,7 +4227,7 @@ function waveFront(w){const W=KT.wave,a=T-w.t0-W.warn;if(a<0)return null;if(w.y0
 function updWave(m){const w=KR.wave;if(!w)return;const W=KT.wave,a=T-w.t0,f=waveFront(w);
  if(f!=null){if(!w.go){w.go=1;SHAKE=.8}SHAKE=Math.max(SHAKE,.25);
   for(const e of KR.adds)if(!e.dead&&!e.kchain&&!e.wv&&f>=e.y){e.wv=1;if(!inSafe(e.x,e.y)){e.dead=1;e.hp=0}}
-  if(!w.hit&&f>=P.y){w.hit=1;if(P.dead<=0&&!inSafe(P.x,P.y)){fl(P.x,P.y-CH-14,'대해일에 휩쓸림!','#7fd8ff');P.hp=0;die()}else if(P.dead<=0)fl(P.x,P.y-CH-14,'버텼다!','#bfefff')}}
+  if(!w.hit&&f>=P.y){w.hit=1;if(P.dead<=0&&!inSafe(P.x,P.y)){P.hp=0;die()}}}
  if(a>=W.warn+W.sweep+W.flood)KR.wave=null}
 /* 공기방울: 예고~파도가 지나갈 때까지. 캐릭터 앞에 반투명 돔으로 그린다 */
 function drawBubble(p,al){const W=KT.wave,pul=.5+.5*Math.sin(T*6),sx=(p[0]-cam.x)*Z,sy=(p[1]-cam.y)*Z,rx=W.r*CH*Z,ry=rx*.6,h=rx*1.25;cx.save();cx.globalAlpha=al;
