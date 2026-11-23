@@ -3778,10 +3778,10 @@ const BOMB_T=MON.length;MON.push({n:'해골 폭탄병',hp:20,e:8,g:5,sk:'mon_bom
 const GR_T=MON.length;MON.push({n:'망자의 손아귀',hp:1,e:0,g:0,sk:'mon_bomber',dummy:1,D:{id:'grasp',n:'망자의 손아귀',rh:1.6,hw:.4,sp:0,hp:1,at:0,df:0,ev:0,ex:0}});
 const ARC_MAP='12-3';
 /* 수치 */
-const AT={msl:{cd:9,n:3,gap:1,life:5,sp:58,turn:2.2,r:.45},sil:2,slow:5,slowK:.3,mstun:5,
+const AT={msl:{cd:{easy:20,normal:18,hard:15},n:3,gap:1,life:5,sp:58,turn:2.2,r:.45},sil:2,slow:5,slowK:.3,mstun:5,
  gr:{cd:12,tele:.6,r:1.0,hits:5,stunAt:5,drainAt:6,drain:.03,max:12},
  sum:{cd:15,n:5},bomb:{cd:20,n:2,r:1.7},curse:{cd:35,dur:30,slow:.7,dmg:.7,take:1.3},
- rage:{at:.1,dur:25,max:30,every:7},tp:.1,gap:[2.2,3.6]};
+ rage:{at:.1,dur:25,max:15,batch:3,every:7},tp:.1,gap:[2.2,3.6]};
 let ARC={m:null,diff:null,asked:0,t0:0,adds:[],msl:[],fx:[],grasp:null,curse:0,sil:0,slowT:0,pic:null};
 const onArcMap=()=>map&&curK==HKEY(ARC_MAP),aHard=()=>ARC.diff=='hard';
 {const _sl=summonLoads;summonLoads=function(){return _sl().concat([load('mon_arcanus','sprites/mon_arcanus.webp'),load('mon_bomber','sprites/mon_bomber.webp'),load('fx_skull','sprites/fx_skull.webp'),load('fx_grasp','sprites/fx_grasp.webp'),load('fx_boom','sprites/fx_boom.webp')])}}
@@ -3885,14 +3885,14 @@ function arcAI(m,dt){const q=UQ(),alive=P.dead<=0;m.hit=Math.max(0,m.hit-dt);m.s
  if(m.bs=='rtp'){const t=T-m.bT;if(t>=.45&&!m.tpd){m.tpd=1;const c=clearAt(map.w/2,map.h/2,CH*1.2)?[map.w/2,map.h/2]:openSpot(map.w/2,map.h/2,0,3);m.x=c[0];m.y=c[1];ARC.fx.push({k:'tpi',x:m.x,y:m.y,t:T})}
   if(t>=.9){m.tpd=0;m.bs='rage';m.bT=T;m.nRf=T+.6;m.nRc=T+1.5}return}
  if(m.bs=='rage'){const t=T-m.bT,R=AT.rage;m.lift=Math.min(1,t/1)*CH*1.2;m.hp=Math.max(Math.round(m.mhp*.01),Math.round(m.mhp*(R.at-(R.at-.01)*Math.min(1,t/R.dur))));
-  if(T>=m.nRf){m.nRf=T+.8;let n=aliveAdds();const ids=['skeleton','mummy','jiangshi','bomber'];while(n<R.max){const id=ids[Math.random()*4|0],a=Math.random()*6.283,r=CH*rnd(2,5);arcAdd(id,m.x+Math.cos(a)*r,m.y+Math.sin(a)*r*.6,id=='bomber'?{bomb:1,hpm:.8}:null);n++;if(n%6==0)break}}
+  if(T>=m.nRf){m.nRf=T+.8;let n=aliveAdds();const ids=['skeleton','mummy','jiangshi','bomber'];while(n<R.max){const id=ids[Math.random()*4|0],a=Math.random()*6.283,r=CH*rnd(2,5);arcAdd(id,m.x+Math.cos(a)*r,m.y+Math.sin(a)*r*.6,id=='bomber'?{bomb:1,hpm:.8}:null);n++;if(n%R.batch==0)break}}
   if(T>=m.nRc){m.nRc=T+R.every;castMissile();castGrasp();castCurse()}
   if(t>=R.dur){m.bs='chase';m.lift=0;m.immune=0;m.hp=Math.round(m.mhp*.01);chat('[보스] 광폭이 끝났습니다. 아르카누스의 힘이 바닥났습니다!','#ffd84a')}return}
  if(m.bs=='cast'){const c=m.cast,p=(T-c.t0)/c.L;if(!c.fired&&p>=.55){c.fired=1;if(alive)fireCast(m,c.k)}if(p>=1){m.bs='chase';m.cd=rnd(...AT.gap)}return}
  /* 쫓기: 너무 가까우면 물러나고, 멀면 다가간다 */
  m.cd=Math.max(0,m.cd-dt);
  if(m.tpq){m.tpq=0;teleport(m);return}
- if(alive&&m.cd<=0){let k=null;if(T>=m.nS){k='sum';m.nS=T+AT.sum.cd}else if(T>=m.nC){k='curse';m.nC=T+AT.curse.cd}else if(T>=m.nG){k='gr';m.nG=T+AT.gr.cd}else if(T>=m.nM){k='msl';m.nM=T+AT.msl.cd}else if(T>=m.nB){k='bomb';m.nB=T+AT.bomb.cd}
+ if(alive&&m.cd<=0){let k=null;if(T>=m.nS){k='sum';m.nS=T+AT.sum.cd}else if(T>=m.nC){k='curse';m.nC=T+AT.curse.cd}else if(T>=m.nG){k='gr';m.nG=T+AT.gr.cd}else if(T>=m.nM){k='msl';m.nM=T+(AT.msl.cd[ARC.diff]||20)}else if(T>=m.nB){k='bomb';m.nB=T+AT.bomb.cd}
   if(k){startCast(m,k);return}}
  const dx=P.x-m.x,dy=P.y-m.y,dp=Math.hypot(dx,dy*1.6);let vx=0,vy=0;
  if(dp<CH*3.2){vx=-dx/dp;vy=-dy/dp}else if(dp>CH*7){vx=dx/dp;vy=dy/dp}
