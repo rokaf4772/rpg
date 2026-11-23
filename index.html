@@ -4217,18 +4217,15 @@ function pickChain(){const L=KR.chains.filter(c=>!c.dead&&c.m&&!c.m.dead);if(!L.
 /* 파도 벽: fx_kwave = 앞으로 밀려오는 파도 시트(6×6, 640×360 원본 해상도). 0~5 물이 차오름 · 6~23 벽이 솟음 · 24~30 부서지며 덮침.
    맵 폭 전체에 이어 붙여(한 칸 걸러 뒤집어 이음매를 숨김) 크라켄 웅덩이에서 맵 아래쪽으로 밀고 내려온다 */
 const KWV={cw:640,ch:360,tw:1050,rise:1.5};
-function waveSpots(){const c=[[KAR.cx-720,880],[KAR.cx+720,880],[KAR.cx,1180],[KAR.cx-420,1150],[KAR.cx+420,1150],[KAR.cx-950,640],[KAR.cx+950,640]],ok=[];
- for(const q of c.sort(()=>Math.random()-.5)){let p=null;for(let r=0;r<CH*4&&!p;r+=CH*.5)for(let a=0;a<6.28&&!p;a+=.8){const x=q[0]+Math.cos(a)*r,y=q[1]+Math.sin(a)*r*.6;if(!blocked(x,y)&&!inPool(x,y))p=[x,y]}
-  if(p&&ok.every(o=>Math.hypot(o[0]-p[0],o[1]-p[1])>CH*5))ok.push(p);if(ok.length>=KT.wave.n)break}return ok}
+function waveSpots(){/* 공기방울은 가운데 아래쪽에 하나 */const q=[KAR.cx,1110];let p=null;for(let r=0;r<CH*4&&!p;r+=CH*.5)for(let a=0;a<6.28&&!p;a+=.8){const x=q[0]+Math.cos(a)*r,y=q[1]+Math.sin(a)*r*.6;if(!blocked(x,y)&&!inPool(x,y))p=[x,y]}return[p||q]}
 function waveStart(m){const W=KT.wave;KR.wave={t0:T,spots:waveSpots(),hit:0};
  krFree();for(const c of KR.chains){c.dead=1;c.brk=T;if(c.m)c.m.dead=1}KR.tents=[];KR.sum=[];P.stun=0;
- m.nT=Math.max(m.nT,T+W.warn+2);m.nB=Math.max(m.nB,T+W.warn+3);m.nC=Math.max(m.nC,T+W.warn+8);SHAKE=.5;
- chat('[보스] 크라켄이 포효합니다! 대해일이 몰려옵니다 — 공기방울 안으로 피하세요!','#7fd8ff')}
+ m.nT=Math.max(m.nT,T+W.warn+2);m.nB=Math.max(m.nB,T+W.warn+3);m.nC=Math.max(m.nC,T+W.warn+8);SHAKE=.5}
 const inSafe=(x,y)=>KR.wave&&KR.wave.spots.some(p=>((x-p[0])/(KT.wave.r*CH))**2+((y-p[1])/(KT.wave.r*CH*.6))**2<1);
 /* 파도 앞줄의 맵 y. 예고가 끝나면 웅덩이 아래에서 출발해 sweep초 동안 맵 아래 끝까지 */
-function waveFront(w){const W=KT.wave,a=T-w.t0-W.warn;if(a<0)return null;const y0=KAR.cy+KAR.ry*.6,y1=map.h+KWV.tw*KWV.ch/KWV.cw*.4;return y0+(y1-y0)*Math.min(1,a/W.sweep)}
+function waveFront(w){const W=KT.wave,a=T-w.t0-W.warn;if(a<0)return null;if(w.y0==null)w.y0=cam.y;const y0=w.y0,y1=map.h+KWV.tw*KWV.ch/KWV.cw*.4;return y0+(y1-y0)*Math.min(1,a/W.sweep)}
 function updWave(m){const w=KR.wave;if(!w)return;const W=KT.wave,a=T-w.t0,f=waveFront(w);
- if(f!=null){if(!w.go){w.go=1;SHAKE=.8;chat('[보스] 대해일이 신전을 덮칩니다!','#7fd8ff')}SHAKE=Math.max(SHAKE,.25);
+ if(f!=null){if(!w.go){w.go=1;SHAKE=.8}SHAKE=Math.max(SHAKE,.25);
   for(const e of KR.adds)if(!e.dead&&!e.kchain&&!e.wv&&f>=e.y){e.wv=1;if(!inSafe(e.x,e.y)){e.dead=1;e.hp=0}}
   if(!w.hit&&f>=P.y){w.hit=1;if(P.dead<=0&&!inSafe(P.x,P.y)){fl(P.x,P.y-CH-14,'대해일에 휩쓸림!','#7fd8ff');P.hp=0;die()}else if(P.dead<=0)fl(P.x,P.y-CH-14,'버텼다!','#bfefff')}}
  if(a>=W.warn+W.sweep+W.flood)KR.wave=null}
@@ -4248,13 +4245,12 @@ function drawWaveSafe(){/* 땅: 안전지대 테두리 + 화살표 / 파도가 �
 function drawWaveWall(f,fi){const A=IMG.fx_kwave;if(!A)return;const s=KWV.tw/KWV.cw,th=KWV.ch*s,fx=(fi%6)*KWV.cw,fy=(fi/6|0)*KWV.ch;
  cx.save();for(let k=0,x=-KWV.tw*.2;x<map.w;k++,x+=KWV.tw-2){const sx=(x-cam.x)*Z,w=KWV.tw*Z;if(sx>cv.width||sx+w<0)continue;const sy=(f-th*.95-cam.y)*Z;
   if(k%2){cx.save();cx.translate(sx+w,0);cx.scale(-1,1);cx.drawImage(A,fx,fy,KWV.cw,KWV.ch,0,sy,w,th*Z);cx.restore()}else cx.drawImage(A,fx,fy,KWV.cw,KWV.ch,sx,sy,w,th*Z)}cx.restore()}
-function drawWaveFx(){const w=KR.wave;if(!w||waveFront(w)!=null)return;const W=KT.wave,left=Math.max(0,W.warn-(T-w.t0));cx.save();cx.textAlign='center';cx.font=`bold ${Math.round(28*DPR)}px sans-serif`;cx.lineWidth=5*DPR;cx.strokeStyle='rgba(0,20,40,.85)';cx.fillStyle='#bfefff';
+function drawWaveFx(){return;const w=KR.wave;if(!w||waveFront(w)!=null)return;const W=KT.wave,left=Math.max(0,W.warn-(T-w.t0));cx.save();cx.textAlign='center';cx.font=`bold ${Math.round(28*DPR)}px sans-serif`;cx.lineWidth=5*DPR;cx.strokeStyle='rgba(0,20,40,.85)';cx.fillStyle='#bfefff';
  const t=`대해일! 공기방울 안으로 — ${left.toFixed(1)}초`,y=cv.height*.3;cx.strokeText(t,cv.width/2,y);cx.fillText(t,cv.width/2,y);cx.restore()}
 {const _dd2=drawDrops;drawDrops=function(){_dd2();if(onKrMap())drawWaveSafe()}}
 {const _sdl2=sumDrawList;sumDrawList=function(L){_sdl2(L);if(!onKrMap()||!KR.wave)return;const w=KR.wave,W=KT.wave,a=T-w.t0,f=waveFront(w);
  const W0=KAR.cy+KAR.ry*.6;
- if(f==null&&a>W.warn-KWV.rise){const fi=Math.min(5,Math.floor((a-(W.warn-KWV.rise))/KWV.rise*6));L.push([W0,()=>drawWaveWall(W0,fi)])}/* 예고 끝무렵 웅덩이에서 물이 차오름 */
- if(f!=null&&f<map.h+KWV.tw){const p=Math.min(1,(a-W.warn)/W.sweep),fi=Math.min(30,6+Math.floor(p*25));L.push([f,()=>drawWaveWall(f,fi)])}
+  if(f!=null&&f<map.h+KWV.tw){const p=Math.min(1,(a-W.warn)/W.sweep),fi=12+Math.min(11,Math.floor(p*12));L.push([f,()=>drawWaveWall(f,fi)])}
  const bal=f==null?1:Math.max(0,1-(a-W.warn-W.sweep)/.6);if(bal>0)for(const p of w.spots)L.push([p[1]+CH*.2,()=>drawBubble(p,bal)])}}
 {const _dg2=drawGame;drawGame=function(){_dg2();if(onKrMap()){cx.save();cx.setTransform(1,0,0,1,0,0);drawWaveFx();cx.restore()}}}
 
