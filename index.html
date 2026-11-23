@@ -582,7 +582,7 @@ const SK_MAX=20;
 let GD=[];
 function dropAt(x,y,it,n){GD.push({x:x+rnd(-14,14)*CH/42,y:y+rnd(-6,8)*CH/42,it,n,t:0})}
 function spawnDrops(m){const gd=typeof goldOf=='function'?goldOf(m):MON[m.t].g+(Math.random()*4|0);if(gd>0)dropAt(m.x,m.y,'coin',gd);const r=Math.random();
-if(m.t==0&&r<.45)dropAt(m.x,m.y,'meat',1);if(m.t==1&&r<.38)dropAt(m.x,m.y,'hide',1);if(Math.random()<.09)dropAt(m.x,m.y,'red',1);if(Math.random()<.06)dropAt(m.x,m.y,'blue',1)}
+if(m.t==0&&r<.45)dropAt(m.x,m.y,'meat',1);if(m.t==1&&r<.38)dropAt(m.x,m.y,'hide',1);/* 일반 몹은 물약을 떨어뜨리지 않는다 (물약은 상점·퀘스트·보스 보상으로) */}
 const RECENT=[];
 function pickup(range){let got=0;for(const d of GD){if(d.t<.35||d.gone)continue;if(Math.hypot(d.x-P.x,(d.y-P.y)*1.3)<range){d.gone=1;got++;
  if(d.it=='coin'){cur.gold+=d.n;fl(d.x,d.y-12*CH/42,'+'+d.n+' 골드','#ffe070');RECENT.unshift('골드 '+d.n)}
