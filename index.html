@@ -4542,6 +4542,76 @@ function drawSwDeath(e){drawSw(e.m,1)}
 {const _dg=drawGame;drawGame=function(){_dg();try{if(!onSwMap())return;const m=SWB.m;if(!m||m.dead)return;const st=[];if(m.rage)st.push(['검기 폭주 — 공격이 빨라집니다','#9fe0ff']);if(P.stun>0)st.push([`기절 ${P.stun.toFixed(1)}초`,'#ffe9a0']);
  drawBarSpec({m,diff:SWB.diff,t0:SWB.t0,pic:SWB.pic,name:'검성',lines:st,col:'#7fd8ff'})}catch(e){}}}
 </script>
+<script>
+/* ===== 검성 추가 스킬 (영상 이펙트 4종) =====
+   1 물결 검기 (초승달 베기 동작) — 굽이치는 물결 검기가 앞으로 나아간다. 이지 1 · 노멀 3 · 하드 5갈래
+   2 섬광 찌르기 (횡베기 동작) — 캐릭터 쪽으로 길게 꿰뚫는 일직선 찌르기
+   3 검풍 난무 (초승달 베기 동작) — 캐릭터 자리에 X자 검풍이 4번 몰아친다. 하드 2곳
+   4 천검 강림 (내려찍기 동작, 앞모습) — 하늘에서 거대한 검이 꽂힌다. 이지 1 · 노멀 2 · 하드 4자루 (예전 하드 '천검' 대신)
+   이펙트 그림: sprites/fx_swwave · fx_swthrust · fx_swx · fx_swgiant (흰 배경 영상에서 배경을 빼고 잘라 낸 프레임 시트) */
+const SWS={wv:{cd:14,n:{easy:1,normal:3,hard:5},sp:6,life:1.5,r:1.1,mul:1.1,spread:.4},
+ th:{cd:11,len:7,w:.75,mul:1.8,min:3,max:10},
+ xs:{cd:16,n:{easy:1,normal:1,hard:2},warn:1,R:2,hits:4,gap:.25,mul:.55},
+ gi:{cd:20,n:{easy:1,normal:2,hard:4},warn:1.4,R:1.8,mul:2}};
+const SWFM={wv:{src:'sprites/fx_swwave.webp',n:25,w:477,h:265,cols:5,fps:27},th:{src:'sprites/fx_swthrust.webp',n:18,w:477,h:181,cols:3,fps:24},
+ xs:{src:'sprites/fx_swx.webp',n:31,w:341,h:185,cols:6,fps:24},gi:{src:'sprites/fx_swgiant.webp',n:20,w:139,h:280,cols:10,fps:24}};
+for(const k in SWFM){const i=new Image();i.src=SWFM[k].src;SWFM[k].img=i}
+SWT.wave.n={easy:0,normal:0,hard:0};
+/* 프레임 하나 그리기: (ax,ay)=시트 칸 안의 기준점(0~1), W=그릴 너비(기기 px) */
+function swFxFrame(k,i,sx,sy,W,ax,ay,rot,flip,al){const M=SWFM[k],A=M.img;if(!A.complete||!A.naturalWidth)return;i=Math.max(0,Math.min(M.n-1,i|0));const s=W/M.w,h=M.h*s;
+ cx.save();cx.translate(sx,sy);if(rot)cx.rotate(rot);if(flip)cx.scale(-1,1);cx.globalAlpha=al;cx.drawImage(A,(i%M.cols)*M.w,(i/M.cols|0)*M.h,M.w,M.h,-ax*W,-ay*h,W,h);
+ cx.globalCompositeOperation='lighter';cx.globalAlpha=al*.45;cx.drawImage(A,(i%M.cols)*M.w,(i/M.cols|0)*M.h,M.w,M.h,-ax*W,-ay*h,W,h);cx.restore()}
+const swAng=m=>Math.atan2(P.y-m.y,P.x-m.x);
+/* 스킬 시작 */
+{const _st=swStartAtk;swStartAtk=function(m,k){if(!SWS[k])return _st(m,k);
+ const an={wv:'slash',th:'sweep',xs:'slash',gi:'plunge'}[k];swAim(m);if(k=='gi')m.dir='d';m.bs='atk';
+ const A=m.atk={k,an,dir:m.dir,d:m.d,t0:T,L:swLen(an),hp:SWT.hitAt[an],hit:0,ang:swAng(m)};
+ if(k=='th'){const hitT=A.t0+A.hp*A.L;SWB.fx.push({k:'th',x:m.x,y:m.y,ang:A.ang,t:hitT-8/SWFM.th.fps,own:A})}
+ if(k=='xs'||k=='gi'){const S=SWS[k],n=S.n[SWB.diff]||1;A.tg=[];for(let i=0;i<n;i++){let x=P.x,y=P.y;if(i){const a=Math.random()*6.283,r=CH*rnd(2,4);x+=Math.cos(a)*r;y+=Math.sin(a)*r*.6;if(blocked(x,y)){x=P.x;y=P.y}}A.tg.push([x,y])}}}}
+/* 맞히기 */
+const segD=(px,py,x0,y0,x1,y1)=>{const vx=x1-x0,vy=y1-y0,L=vx*vx+vy*vy||1,t=Math.max(0,Math.min(1,((px-x0)*vx+(py-y0)*vy)/L));return Math.hypot(px-x0-vx*t,py-y0-vy*t)};
+const thEnd=(m,A)=>[m.x+Math.cos(A.ang)*SWS.th.len*CH,m.y+Math.sin(A.ang)*SWS.th.len*CH];
+{const _dh=swDoHit;swDoHit=function(m,A){if(!SWS[A.k])return _dh(m,A);const D=SWB.diff,S=SWS[A.k];
+ if(A.k=='wv'){const n=S.n[D]||1;for(let i=0;i<n;i++){const a=A.ang+(i-(n-1)/2)*S.spread;SWB.fx.push({k:'wv',x:m.x+Math.cos(a)*CH,y:m.y+Math.sin(a)*CH,vx:Math.cos(a),vy:Math.sin(a),t:T,hitd:0})}SHAKE=Math.max(SHAKE,.2)}
+ if(A.k=='th'){const[x1,y1]=thEnd(m,A);if(P.dead<=0&&segD(P.x,P.y,m.x,m.y,x1,y1)<=S.w*CH)swHurt(m,S.mul);SHAKE=Math.max(SHAKE,.3)}
+ if(A.k=='xs')for(const[x,y]of A.tg)SWB.fx.push({k:'xs',x,y,t:T+S.warn,hn:0});
+ if(A.k=='gi')for(const[x,y]of A.tg)SWB.fx.push({k:'gi',x,y,t:T+S.warn,hitd:0});}}
+/* 진행 */
+{const _fx=swFx;swFx=function(dt){_fx(dt);const m=SWB.m;
+ for(const e of SWB.fx){
+  if(e.k=='wv'){const S=SWS.wv;e.x+=e.vx*S.sp*CH*dt;e.y+=e.vy*S.sp*CH*dt;if(!e.hitd&&m&&P.dead<=0&&inE(e.x,e.y,S.r*CH,S.r*CH*.6,P.x,P.y)){e.hitd=1;swHurt(m,S.mul)}if(T-e.t>S.life||blocked(e.x,e.y)&&T-e.t>.3)e.done=1}
+  if(e.k=='th'&&T-e.t>SWFM.th.n/SWFM.th.fps)e.done=1;
+  if(e.k=='th'&&e.own&&(!m||m.atk!==e.own)&&T<e.t)e.done=1;
+  if(e.k=='xs'){const S=SWS.xs;while(e.hn<S.hits&&T>=e.t+.15+e.hn*S.gap){e.hn++;if(m&&P.dead<=0&&inE(e.x,e.y,S.R*CH,S.R*CH*.6,P.x,P.y))swHurt(m,S.mul);SHAKE=Math.max(SHAKE,.12)}if(T>e.t+SWFM.xs.n/SWFM.xs.fps)e.done=1}
+  if(e.k=='gi'){const S=SWS.gi;if(!e.hitd&&T>=e.t){e.hitd=1;if(m&&P.dead<=0&&inE(e.x,e.y,S.R*CH,S.R*CH*.6,P.x,P.y))swHurt(m,S.mul);SHAKE=Math.max(SHAKE,.45)}if(T>e.t+SWFM.gi.n/SWFM.gi.fps)e.done=1}}
+ SWB.fx=SWB.fx.filter(e=>!e.done)}}
+/* 스킬 고르기: 쿨이 돈 스킬을 먼저, 없으면 원래 패턴 */
+{const _ai=swAI;swAI=function(m,dt){if(m.nGi==null){m.nGi=T+9;m.nXs=T+13;m.nTh=T+6;m.nWv=T+4}m.nRain=1e12;
+ if(m.bs=='chase'&&m.cd<=0&&P.dead<=0){const dp=Math.hypot(P.x-m.x,(P.y-m.y)*1.6),r=m.rage?.7:1;let k=null;
+  if(T>=m.nGi){k='gi';m.nGi=T+SWS.gi.cd*r}
+  else if(T>=m.nXs&&dp>CH*2.5){k='xs';m.nXs=T+SWS.xs.cd*r}
+  else if(T>=m.nTh&&dp>CH*SWS.th.min&&dp<CH*SWS.th.max){k='th';m.nTh=T+SWS.th.cd*r}
+  else if(T>=m.nWv&&dp>CH*3.5){k='wv';m.nWv=T+SWS.wv.cd*r}
+  if(k){swStartAtk(m,k);swFx(dt);return}}
+ return _ai(m,dt)}}
+/* 바닥 예고 */
+function thTele(m,A,p){const[x1,y1]=thEnd(m,A),w=SWS.th.w*CH*Z,sx=(m.x-cam.x)*Z,sy=(m.y-cam.y)*Z,L=Math.hypot(x1-m.x,y1-m.y)*Z;cx.save();cx.translate(sx,sy);cx.rotate(A.ang);
+ cx.fillStyle='rgba(255,40,40,.2)';cx.strokeStyle='rgba(255,50,40,.85)';cx.lineWidth=Math.max(2,CH*.035*Z);cx.beginPath();cx.rect(0,-w,L,w*2);cx.fill();cx.stroke();cx.fillStyle=`rgba(255,70,50,${.25+.2*p})`;cx.fillRect(0,-w,L*p,w*2);cx.restore()}
+{const _g=drawSwGround;drawSwGround=function(){const m=SWB.m;
+ if(m&&!m.dead&&m.bs=='atk'&&SWS[m.atk.k]){const A=m.atk,p=Math.min(1,Math.max(0,(T-A.t0)/A.L/A.hp));if(!A.hit){if(A.k=='th')thTele(m,A,p);if(A.tg)for(const[x,y]of A.tg)telE(x,y,SWS[A.k].R*CH,SWS[A.k].R*CH*.6,p*.3)}
+  const sv=m.atk;m.atk=Object.assign({},A,{hit:1});_g();m.atk=sv}else _g();
+ for(const e of SWB.fx){if((e.k=='xs'||e.k=='gi')&&T<e.t){const S=SWS[e.k];telE(e.x,e.y,S.R*CH,S.R*CH*.6,Math.max(0,1-(e.t-T)/S.warn))}}}}
+/* 이펙트 그리기 */
+function drawSwSk(e){const sx=(e.x-cam.x)*Z,sy=(e.y-cam.y)*Z;
+ if(e.k=='wv'){const M=SWFM.wv,a=T-e.t,i=Math.floor(a*M.fps)%M.n,al=Math.max(0,Math.min(1,(SWS.wv.life-a)/.3,a/.1)),ang=Math.atan2(e.vy,e.vx),left=e.vx<0;
+  swFxFrame('wv',i,sx,sy,CH*4.2*Z,.5,.72,left?ang-Math.PI:ang,left,al)}
+ if(e.k=='th'){const M=SWFM.th,a=T-e.t;if(a<0)return;const i=Math.floor(a*M.fps),W=M.w*SWS.th.len*CH*Z/300,right=Math.cos(e.ang)>=0;
+  swFxFrame('th',i,sx,sy-CH*.9*Z,W,300/477,.74,right?e.ang:e.ang-Math.PI,right,1)}
+ if(e.k=='xs'){const M=SWFM.xs,a=T-e.t;if(a<0)return;const i=Math.floor(a*M.fps),al=Math.min(1,(M.n/M.fps-a)/.25);swFxFrame('xs',i,sx,sy-CH*.5*Z,SWS.xs.R*CH*2.8*Z,.5,.55,0,0,al)}
+ if(e.k=='gi'){const M=SWFM.gi,a=T-e.t+3/M.fps;if(a<0)return;const i=Math.floor(a*M.fps),W=CH*6.5*Z*M.w/M.h,al=Math.min(1,(M.n/M.fps-a)/.2);swFxFrame('gi',i,sx,sy,W,.5,.86,0,0,al)}}
+{const _sdl=sumDrawList;sumDrawList=function(L){_sdl(L);if(!onSwMap())return;for(const e of SWB.fx)if(SWFM[e.k])L.push([e.y+(e.k=='gi'?3:1),()=>drawSwSk(e)])}}
+</script>
+
 
 
 
