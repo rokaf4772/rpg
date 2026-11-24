@@ -4587,11 +4587,11 @@ const thEnd=(m,A)=>[m.x+Math.cos(A.ang)*SWS.th.len*CH,m.y+Math.sin(A.ang)*SWS.th
  SWB.fx=SWB.fx.filter(e=>!e.done)}}
 /* 스킬 고르기: 쿨이 돈 스킬을 먼저, 없으면 원래 패턴 */
 {const _ai=swAI;swAI=function(m,dt){if(m.nGi==null){m.nGi=T+9;m.nXs=T+13;m.nTh=T+6;m.nWv=T+4}m.nRain=1e12;
- if(m.bs=='chase'&&m.cd<=0&&P.dead<=0){const dp=Math.hypot(P.x-m.x,(P.y-m.y)*1.6),r=m.rage?.7:1;let k=null;
+ if(m.bs=='chase'&&m.cd-dt<=0&&P.dead<=0){const dp=Math.hypot(P.x-m.x,(P.y-m.y)*1.6),r=m.rage?.7:1;let k=null;
   if(T>=m.nGi){k='gi';m.nGi=T+SWS.gi.cd*r}
-  else if(T>=m.nXs&&dp>CH*2.5){k='xs';m.nXs=T+SWS.xs.cd*r}
-  else if(T>=m.nTh&&dp>CH*SWS.th.min&&dp<CH*SWS.th.max){k='th';m.nTh=T+SWS.th.cd*r}
-  else if(T>=m.nWv&&dp>CH*3.5){k='wv';m.nWv=T+SWS.wv.cd*r}
+  else if(T>=m.nXs){k='xs';m.nXs=T+SWS.xs.cd*r}
+  else if(T>=m.nTh&&dp<CH*SWS.th.max){k='th';m.nTh=T+SWS.th.cd*r}
+  else if(T>=m.nWv){k='wv';m.nWv=T+SWS.wv.cd*r}
   if(k){swStartAtk(m,k);swFx(dt);return}}
  return _ai(m,dt)}}
 /* 바닥 예고 */
